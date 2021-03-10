@@ -147,11 +147,10 @@ public class GitHandler {
                 try (DiffFormatter formatter = new DiffFormatter(put)) {
                     formatter.setRepository(git.getRepository());
                     List<DiffEntry> entries = formatter.scan(oldTreeIter, newTreeIter);
-                    Map<String, EditList> edits = new HashMap<>();
-                    Patch patch = new Patch();
                     for (DiffEntry entry : entries) {
                         formatter.format(entry);
                     }
+                    formatter.flush();
                     return put.toString();
                 }
             }
@@ -168,16 +167,16 @@ public class GitHandler {
             git.apply()
                .setPatch(new ByteArrayInputStream(patch.getBytes(StandardCharsets.UTF_8)))
                .call();
-            git.commit()
-               .setMessage(patchMessage)
-               .call();
+            this.createCommitOnCurrentBranch(patchMessage);
         }
     }
 
-    public void createCommitOnCurrentBranch(String commitMessage) throws IOException, GitAPIException {
+    public boolean createCommitOnCurrentBranch(String commitMessage) throws IOException, GitAPIException {
+        boolean commitCreated = false;
         try (Git git = Git.open(this.repositoryPathAsFile)) {
             Status status = git.status().call();
             if (!status.isClean()) {
+                commitCreated = true;
                 // Add new and changed files to index
                 git.add()
                    .addFilepattern(".")
@@ -195,6 +194,7 @@ public class GitHandler {
                    .call();
             }
         }
+        return commitCreated;
     }
 
     /**

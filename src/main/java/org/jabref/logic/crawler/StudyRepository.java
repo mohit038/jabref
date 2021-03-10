@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -113,6 +114,9 @@ class StudyRepository {
         }
         study = parseStudyFile();
         try {
+            // Update repository structure on work branch in case of changes
+            setUpRepositoryStructure();
+            gitHandler.createCommitOnCurrentBranch("Setup/Update Repository Structure");
             gitHandler.checkoutBranch(SEARCH_BRANCH);
             // If study definition does not exist on this branch or was changed on work branch, copy it from work
             boolean studyDefinitionDoesNotExistOrChanged = !(Files.exists(studyDefinitionFile) && new StudyYamlParser().parseStudyYamlFile(studyDefinitionFile).equalsBesideLastSearchDate(study));
@@ -120,7 +124,7 @@ class StudyRepository {
                 new StudyYamlParser().writeStudyYamlFile(study, studyDefinitionFile);
             }
             this.setUpRepositoryStructure();
-            gitHandler.createCommitOnCurrentBranch("Setup search branch");
+            gitHandler.createCommitOnCurrentBranch("Setup/Update Repository Structure");
         } catch (GitAPIException e) {
             LOGGER.error("Could not checkout search branch.");
         }
@@ -218,12 +222,15 @@ class StudyRepository {
         persistStudy();
         try {
             // First commit changes to search branch branch and update remote
-            String commitMessage = "Conducted search: " + LocalDateTime.now();
-            gitHandler.createCommitOnCurrentBranch(commitMessage);
-            // Merge search commit into working branch
-            String newSearchResultsPatch = gitHandler.calculateDiffOfBranchHeadAndLastCommitWithChanges(SEARCH_BRANCH);
+            String commitMessage = "Conducted search: " + LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+            boolean newSearchResults = gitHandler.createCommitOnCurrentBranch(commitMessage);
             gitHandler.checkoutBranch(WORK_BRANCH);
-            gitHandler.applyPatchOnCurrentBranch(newSearchResultsPatch, commitMessage);
+            if (!newSearchResults) {
+                return;
+            }
+            // Patch new results into work branch
+            String newSearchResultsPatch = gitHandler.calculateDiffOfBranchHeadAndLastCommitWithChanges(SEARCH_BRANCH);
+            gitHandler.applyPatchOnCurrentBranch(newSearchResultsPatch, commitMessage + " - Patch");
             // Update both remote tracked branches
             updateRemoteSearchAndWorkBranch();
         } catch (GitAPIException e) {

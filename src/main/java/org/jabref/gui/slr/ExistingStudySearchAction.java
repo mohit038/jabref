@@ -54,6 +54,8 @@ public class ExistingStudySearchAction extends SimpleCommand {
 
     @Override
     public void execute() {
+        // Reset before each execution
+        studyDirectory = null;
         crawl();
     }
 
