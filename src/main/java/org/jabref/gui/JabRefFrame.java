@@ -17,6 +17,7 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.binding.StringBinding;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.transformation.FilteredList;
 import javafx.concurrent.Task;
 import javafx.geometry.Orientation;
 import javafx.scene.Group;
@@ -575,14 +576,17 @@ public class JabRefFrame extends BorderPane {
         initDragAndDrop();
 
         // Bind global state
+        FilteredList<Tab> filteredTabs = new FilteredList<>(tabbedPane.getTabs());
+        filteredTabs.setPredicate(tab -> tab instanceof LibraryTab);
 
         // This variable cannot be inlined, since otherwise the list created by EasyBind is being garbage collected
-        openDatabaseList = EasyBind.map(tabbedPane.getTabs(), tab -> ((LibraryTab) tab).getBibDatabaseContext());
+        openDatabaseList = EasyBind.map(filteredTabs, tab -> ((LibraryTab) tab).getBibDatabaseContext());
         EasyBind.bindContent(stateManager.getOpenDatabases(), openDatabaseList);
 
         stateManager.activeDatabaseProperty().bind(
                 EasyBind.map(tabbedPane.getSelectionModel().selectedItemProperty(),
                         selectedTab -> Optional.ofNullable(selectedTab)
+                                               .filter(tab -> tab instanceof LibraryTab)
                                                .map(tab -> (LibraryTab) tab)
                                                .map(LibraryTab::getBibDatabaseContext)));
 
@@ -603,7 +607,7 @@ public class JabRefFrame extends BorderPane {
          * cut/paste/copy operations would some times occur in the wrong tab.
          */
         EasyBind.subscribe(tabbedPane.getSelectionModel().selectedItemProperty(), tab -> {
-            if (tab == null) {
+            if ((tab == null) || (!(tab instanceof LibraryTab))) {
                 stateManager.setSelectedEntries(Collections.emptyList());
                 mainStage.titleProperty().unbind();
                 mainStage.setTitle(FRAME_TITLE);
