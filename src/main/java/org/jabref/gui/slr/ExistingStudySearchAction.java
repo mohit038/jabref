@@ -14,7 +14,7 @@ import org.jabref.gui.util.DirectoryDialogConfiguration;
 import org.jabref.gui.util.TaskExecutor;
 import org.jabref.logic.crawler.Crawler;
 import org.jabref.logic.exporter.SavePreferences;
-import org.jabref.logic.git.GitHandler;
+import org.jabref.logic.git.SlrGitHandler;
 import org.jabref.logic.importer.ImportFormatPreferences;
 import org.jabref.logic.importer.ParseException;
 import org.jabref.logic.l10n.Localization;
@@ -82,7 +82,7 @@ public class ExistingStudySearchAction extends SimpleCommand {
         }
         final Crawler crawler;
         try {
-            crawler = new Crawler(studyDirectory, new GitHandler(studyDirectory), importFormatPreferneces, savePreferences, preferencesService.getTimestampPreferences(), new BibEntryTypesManager(), fileUpdateMonitor);
+            crawler = new Crawler(studyDirectory, new SlrGitHandler(studyDirectory), importFormatPreferneces, savePreferences, preferencesService.getTimestampPreferences(), new BibEntryTypesManager(), fileUpdateMonitor);
         } catch (IOException | ParseException e) {
             LOGGER.error("Error during reading of study definition file.", e);
             dialogService.showErrorDialogAndWait(Localization.lang("Error during reading of study definition file."), e);

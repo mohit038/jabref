@@ -3,7 +3,6 @@ package org.jabref.logic.crawler;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
-import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,7 +19,7 @@ import org.jabref.logic.exporter.AtomicFileWriter;
 import org.jabref.logic.exporter.BibtexDatabaseWriter;
 import org.jabref.logic.exporter.SaveException;
 import org.jabref.logic.exporter.SavePreferences;
-import org.jabref.logic.git.GitHandler;
+import org.jabref.logic.git.SlrGitHandler;
 import org.jabref.logic.importer.ImportFormatPreferences;
 import org.jabref.logic.importer.OpenDatabase;
 import org.jabref.logic.importer.ParseException;
@@ -38,7 +37,6 @@ import org.jabref.model.study.StudyQuery;
 import org.jabref.model.util.FileUpdateMonitor;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.merge.MergeStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,7 +62,7 @@ class StudyRepository {
 
     private final Path repositoryPath;
     private final Path studyDefinitionFile;
-    private final GitHandler gitHandler;
+    private final SlrGitHandler gitHandler;
     private final Study study;
     private final ImportFormatPreferences importFormatPreferences;
     private final FileUpdateMonitor fileUpdateMonitor;
@@ -84,7 +82,7 @@ class StudyRepository {
      * @throws ParseException           Problem parsing the study definition file.
      */
     public StudyRepository(Path pathToRepository,
-                           GitHandler gitHandler,
+                           SlrGitHandler gitHandler,
                            ImportFormatPreferences importFormatPreferences,
                            FileUpdateMonitor fileUpdateMonitor,
                            SavePreferences savePreferences,
@@ -216,6 +214,9 @@ class StudyRepository {
      */
     public void persist(List<QueryResult> crawlResults) throws IOException, GitAPIException, SaveException {
         updateWorkAndSearchBranch();
+        study.setLastSearchDate(LocalDate.now());
+        persistStudy();
+        gitHandler.createCommitOnCurrentBranch("Update search date");
         gitHandler.checkoutBranch(SEARCH_BRANCH);
         persistResults(crawlResults);
         study.setLastSearchDate(LocalDate.now());
@@ -229,8 +230,7 @@ class StudyRepository {
                 return;
             }
             // Patch new results into work branch
-            String newSearchResultsPatch = gitHandler.calculateDiffOfBranchHeadAndLastCommitWithChanges(SEARCH_BRANCH);
-            gitHandler.applyPatchOnCurrentBranch(newSearchResultsPatch, commitMessage + " - Patch");
+            gitHandler.appendLatestSearchResultsOntoCurrentBranch(commitMessage + " - Patch", SEARCH_BRANCH);
             // Update both remote tracked branches
             updateRemoteSearchAndWorkBranch();
         } catch (GitAPIException e) {
