@@ -102,7 +102,7 @@ public class SlrGitHandler extends GitHandler {
                 // Find the relative path of the file that is related with the current diff
                 relativePath = currentToken.substring(13, currentToken.indexOf(" b/"));
                 content = false;
-                joiner = new StringJoiner("\n", "", "\n");
+                joiner = new StringJoiner("\n");
                 continue;
             }
             // From here on content follows
@@ -110,7 +110,8 @@ public class SlrGitHandler extends GitHandler {
                 content = true;
                 continue;
             }
-            if (content) {
+            // Only add "new" lines to diff (no context lines
+            if (content && currentToken.startsWith("+")) {
                 // Do not include + sign
                 if (joiner != null) {
                     joiner.add(currentToken.substring(1));
@@ -127,7 +128,15 @@ public class SlrGitHandler extends GitHandler {
     void applyPatch(Map<Path, String> patch) {
         patch.keySet().forEach(path -> {
             try {
-                Files.writeString(path, patch.get(path) + Files.readString(path), StandardCharsets.UTF_8);
+                String currentContent = Files.readString(path);
+                String prefix = "";
+                if (currentContent.startsWith("% Encoding:")) {
+                    int endOfEncoding = currentContent.indexOf("\n");
+                    // Include Encoding and the empty line
+                    prefix = currentContent.substring(0,endOfEncoding + 1) + "\n";
+                    currentContent = currentContent.substring(endOfEncoding + 2);
+                }
+                Files.writeString(path, prefix + patch.get(path) + currentContent, StandardCharsets.UTF_8);
             } catch (IOException e) {
                 LOGGER.error("Could not apply patch.");
             }
