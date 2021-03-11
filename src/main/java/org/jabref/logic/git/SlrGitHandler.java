@@ -20,6 +20,7 @@ import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.merge.MergeStrategy;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 
 public class SlrGitHandler extends GitHandler {
@@ -32,11 +33,15 @@ public class SlrGitHandler extends GitHandler {
         super(repositoryPath);
     }
 
-    public void appendLatestSearchResultsOntoCurrentBranch(String patchMessage, String searchBranchName) throws IOException, GitAPIException {
+    public void appendLatestSearchResultsOntoCurrentBranch(String patchMessage, String searchBranchName, String workBranchName) throws IOException, GitAPIException {
+        // Create a commit on work branch with search commit as a parent
+        this.mergeBranches(workBranchName, searchBranchName, MergeStrategy.OURS);
+        // Calculate and apply new search results to work branch
         String patch = calculatePatchOfNewSearchResults(searchBranchName);
         Map<Path, String> result = parsePatchForAddedEntries(patch);
         applyPatch(result);
-        this.createCommitOnCurrentBranch(patchMessage);
+        // Amend these changes to the merge commit -> Commit has search branch as parent and contains the new results
+        this.createCommitOnCurrentBranch(patchMessage, true);
     }
 
     /**

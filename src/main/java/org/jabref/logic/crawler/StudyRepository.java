@@ -101,7 +101,7 @@ class StudyRepository {
             throw new IOException("The given repository does not exists.");
         }
         try {
-            gitHandler.createCommitOnCurrentBranch("Save changes before searching.");
+            gitHandler.createCommitOnCurrentBranch("Save changes before searching.", false);
             gitHandler.checkoutBranch(WORK_BRANCH);
             updateWorkAndSearchBranch();
         } catch (GitAPIException e) {
@@ -114,7 +114,7 @@ class StudyRepository {
         try {
             // Update repository structure on work branch in case of changes
             setUpRepositoryStructure();
-            gitHandler.createCommitOnCurrentBranch("Setup/Update Repository Structure");
+            gitHandler.createCommitOnCurrentBranch("Setup/Update Repository Structure", false);
             gitHandler.checkoutBranch(SEARCH_BRANCH);
             // If study definition does not exist on this branch or was changed on work branch, copy it from work
             boolean studyDefinitionDoesNotExistOrChanged = !(Files.exists(studyDefinitionFile) && new StudyYamlParser().parseStudyYamlFile(studyDefinitionFile).equalsBesideLastSearchDate(study));
@@ -122,7 +122,7 @@ class StudyRepository {
                 new StudyYamlParser().writeStudyYamlFile(study, studyDefinitionFile);
             }
             this.setUpRepositoryStructure();
-            gitHandler.createCommitOnCurrentBranch("Setup/Update Repository Structure");
+            gitHandler.createCommitOnCurrentBranch("Setup/Update Repository Structure", false);
         } catch (GitAPIException e) {
             LOGGER.error("Could not checkout search branch.");
         }
@@ -216,7 +216,7 @@ class StudyRepository {
         updateWorkAndSearchBranch();
         study.setLastSearchDate(LocalDate.now());
         persistStudy();
-        gitHandler.createCommitOnCurrentBranch("Update search date");
+        gitHandler.createCommitOnCurrentBranch("Update search date", true);
         gitHandler.checkoutBranch(SEARCH_BRANCH);
         persistResults(crawlResults);
         study.setLastSearchDate(LocalDate.now());
@@ -224,13 +224,13 @@ class StudyRepository {
         try {
             // First commit changes to search branch branch and update remote
             String commitMessage = "Conducted search: " + LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-            boolean newSearchResults = gitHandler.createCommitOnCurrentBranch(commitMessage);
+            boolean newSearchResults = gitHandler.createCommitOnCurrentBranch(commitMessage, false);
             gitHandler.checkoutBranch(WORK_BRANCH);
             if (!newSearchResults) {
                 return;
             }
             // Patch new results into work branch
-            gitHandler.appendLatestSearchResultsOntoCurrentBranch(commitMessage + " - Patch", SEARCH_BRANCH);
+            gitHandler.appendLatestSearchResultsOntoCurrentBranch(commitMessage + " - Patch", SEARCH_BRANCH, WORK_BRANCH);
             // Update both remote tracked branches
             updateRemoteSearchAndWorkBranch();
         } catch (GitAPIException e) {

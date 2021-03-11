@@ -14,6 +14,7 @@ import org.eclipse.jgit.api.RmCommand;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.merge.MergeStrategy;
 import org.eclipse.jgit.transport.CredentialsProvider;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.slf4j.Logger;
@@ -102,7 +103,7 @@ public class GitHandler {
         }
     }
 
-    public boolean createCommitOnCurrentBranch(String commitMessage) throws IOException, GitAPIException {
+    public boolean createCommitOnCurrentBranch(String commitMessage, boolean amend) throws IOException, GitAPIException {
         boolean commitCreated = false;
         try (Git git = Git.open(this.repositoryPathAsFile)) {
             Status status = git.status().call();
@@ -120,12 +121,37 @@ public class GitHandler {
                     removeCommand.call();
                 }
                 git.commit()
+                   .setAmend(amend)
                    .setAllowEmpty(false)
                    .setMessage(commitMessage)
                    .call();
             }
         }
         return commitCreated;
+    }
+
+    /**
+     * Merges the source branch into the target branch
+     *
+     * @param targetBranch the name of the branch that is merged into
+     * @param sourceBranch the name of the branch that gets merged
+     */
+    public void mergeBranches(String targetBranch, String sourceBranch, MergeStrategy mergeStrategy) throws IOException, GitAPIException {
+        String currentBranch = this.getCurrentlyCheckedOutBranch();
+        try (Git git = Git.open(this.repositoryPathAsFile)) {
+            Optional<Ref> sourceBranchRef = getRefForBranch(sourceBranch);
+            if (sourceBranchRef.isEmpty()) {
+                // Do nothing
+                return;
+            }
+            this.checkoutBranch(targetBranch);
+            git.merge()
+               .include(sourceBranchRef.get())
+               .setStrategy(mergeStrategy)
+               .setMessage("Merge search branch into working branch.")
+               .call();
+        }
+        this.checkoutBranch(currentBranch);
     }
 
     /**

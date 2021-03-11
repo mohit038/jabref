@@ -40,7 +40,7 @@ class GitHandlerTest {
         try (Git git = Git.open(repositoryPath.toFile())) {
             // Create commit
             Files.createFile(Path.of(repositoryPath.toString(), "Test.txt"));
-            gitHandler.createCommitOnCurrentBranch("TestCommit");
+            gitHandler.createCommitOnCurrentBranch("TestCommit", false);
 
             AnyObjectId head = git.getRepository().resolve(Constants.HEAD);
             Iterator<RevCommit> log = git.log()

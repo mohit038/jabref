@@ -38,11 +38,11 @@ class SlrGitHandlerTest {
         Files.createDirectory(Path.of(repositoryPath.toString(), "TestFolder"));
         Files.createFile(Path.of(repositoryPath.toString(), "TestFolder", "Test1.txt"));
         Files.writeString(Path.of(repositoryPath.toString(), "TestFolder", "Test1.txt"), "This is a new line of text\n");
-        gitHandler.createCommitOnCurrentBranch("Commit 1 on branch1");
+        gitHandler.createCommitOnCurrentBranch("Commit 1 on branch1", false);
 
         Files.createFile(Path.of(repositoryPath.toString(), "Test2.txt"));
         Files.writeString(Path.of(repositoryPath.toString(), "TestFolder", "Test1.txt"), "This is a new line of text 2\n" + Files.readString(Path.of(repositoryPath.toString(), "TestFolder", "Test1.txt")));
-        gitHandler.createCommitOnCurrentBranch("Commit 2 on branch1");
+        gitHandler.createCommitOnCurrentBranch("Commit 2 on branch1", false);
 
         assertEquals(expectedPatch, gitHandler.calculatePatchOfNewSearchResults("branch1"));
     }
@@ -68,14 +68,14 @@ class SlrGitHandlerTest {
     void applyPatch() throws IOException, GitAPIException {
         gitHandler.checkoutBranch("branch1");
         Files.createFile(Path.of(repositoryPath.toString(), "Test1.txt"));
-        gitHandler.createCommitOnCurrentBranch("Commit on branch1");
+        gitHandler.createCommitOnCurrentBranch("Commit on branch1", false);
         gitHandler.checkoutBranch("branch2");
         Files.createFile(Path.of(repositoryPath.toString(), "Test2.txt"));
         Files.writeString(Path.of(repositoryPath.toString(), "Test1.txt"), "This is a new line of text\n");
-        gitHandler.createCommitOnCurrentBranch("Commit on branch2.");
+        gitHandler.createCommitOnCurrentBranch("Commit on branch2.", false);
 
         gitHandler.checkoutBranch("branch1");
-        gitHandler.appendLatestSearchResultsOntoCurrentBranch("TestMessage", "branch2");
+        gitHandler.appendLatestSearchResultsOntoCurrentBranch("TestMessage", "branch2", "branch1");
 
         assertEquals("This is a new line of text\n", Files.readString(Path.of(repositoryPath.toString(), "Test1.txt")));
     }
